@@ -90,6 +90,10 @@ Local `.env` working does **not** auto-sync to Render — you must paste the sam
 
 ---
 
+### Scraper on Render
+
+Set `SKIP_PLAYWRIGHT=true` (in `render.yaml`). The app uses **Jina Reader** then **direct HTTP** — no Playwright browsers needed.
+
 ### Tables on Neon
 
 Tables are created automatically on startup (`init_db`). Expected tables: `tenants`, `users`, `analysis_reports`, `blueprints`.
