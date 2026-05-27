@@ -360,10 +360,16 @@
             return 'text-emerald-700 bg-emerald-50 border-emerald-100';
         }
 
-        function statusBadge(status) {
+        function statusBadge(status, createdAt) {
             const s = (status || 'pending').toLowerCase();
+            if (s === 'running') {
+                const ageMs = Date.now() - new Date(createdAt || 0).getTime();
+                if (ageMs > 5 * 60 * 1000) {
+                    return { label: 'Incomplete', cls: 'bg-amber-100 text-amber-800' };
+                }
+                return { label: 'In progress', cls: 'bg-blue-100 text-blue-700' };
+            }
             if (s === 'completed') return { label: 'Completed', cls: 'bg-emerald-100 text-emerald-700' };
-            if (s === 'running') return { label: 'In progress', cls: 'bg-blue-100 text-blue-700' };
             if (s === 'failed') return { label: 'Failed', cls: 'bg-red-100 text-red-700' };
             return { label: status, cls: 'bg-slate-100 text-slate-600' };
         }
@@ -559,6 +565,13 @@
                 setHistoryOpening(id);
                 try {
                     const data = await apiFetch(`/api/v1/reports/analysis/${id}`);
+                    const hasData = data.seo_report && Object.keys(data.seo_report).length > 0;
+                    if (data.status === 'running' || (!hasData && data.status !== 'failed')) {
+                        showToast('This audit did not finish saving. Please run the analysis again for full results.');
+                    }
+                    if (data.status === 'failed') {
+                        showToast(data.errors?.[0] || 'This audit failed. Please try again.');
+                    }
                     setMode1Result(data);
                     setUrlInput(data.source_url || '');
                     setReportTab('WEBSITE');
@@ -1368,7 +1381,7 @@
                                                     if (isAudit && item.source_url) {
                                                         const domain = extractDomain(item.source_url);
                                                         const score = healthScoreDisplay(item);
-                                                        const badge = statusBadge(item.status);
+                                                        const badge = statusBadge(item.status, item.created_at);
                                                         return (
                                                             <button key={`a-${id}`} disabled={opening} onClick={() => openHistoryReport(id)}
                                                                 className="w-full group flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-md transition-all text-left disabled:opacity-60">
@@ -1396,7 +1409,7 @@
                                                         );
                                                     }
 
-                                                    const badge = statusBadge(item.status);
+                                                    const badge = statusBadge(item.status, item.created_at);
                                                     const prompt = item.business_input || item.title || 'Blueprint';
                                                     return (
                                                         <button key={`b-${id}`} disabled={opening} onClick={() => openHistoryBlueprint(id)}
