@@ -1,16 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pip install -r requirements-vercel.txt",
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60,
-      "memory": 1024
-    }
-  },
   "rewrites": [
-    { "source": "/health", "destination": "/api/index" },
-    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/", "destination": "/frontend/index.html" },
-    { "source": "/(.*)", "destination": "/frontend/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/frontend/index.html" }
   ]
 }

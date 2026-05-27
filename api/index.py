@@ -10,11 +10,13 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.main import app  # noqa: E402
+from app.main import app as fastapi_app  # noqa: E402
 
 try:
     from mangum import Mangum
 
-    handler = Mangum(app, lifespan="on")
+    handler = Mangum(fastapi_app, lifespan="on")
+    app = handler  # Vercel @vercel/python looks for `app` ASGI export
 except ImportError:  # pragma: no cover
-    handler = app
+    handler = fastapi_app
+    app = fastapi_app
