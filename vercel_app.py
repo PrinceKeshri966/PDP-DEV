@@ -35,13 +35,42 @@ def _load_routers() -> None:
     global _routers_loaded
     if _routers_loaded:
         return
-    from app.api.routes import analyze, auth, chat, reports
+
+    for loader in (
+        _load_auth,
+        _load_reports,
+        _load_chat,
+        _load_analyze,
+    ):
+        try:
+            loader()
+        except Exception:
+            pass
+    _routers_loaded = True
+
+
+def _load_auth() -> None:
+    from app.api.routes import auth
+
+    app.include_router(auth.router, prefix="/api/v1")
+
+
+def _load_reports() -> None:
+    from app.api.routes import reports
+
+    app.include_router(reports.router, prefix="/api/v1")
+
+
+def _load_chat() -> None:
+    from app.api.routes import chat
+
+    app.include_router(chat.router, prefix="/api/v1")
+
+
+def _load_analyze() -> None:
+    from app.api.routes import analyze
 
     app.include_router(analyze.router, prefix="/api/v1")
-    app.include_router(chat.router, prefix="/api/v1")
-    app.include_router(auth.router, prefix="/api/v1")
-    app.include_router(reports.router, prefix="/api/v1")
-    _routers_loaded = True
 
 
 try:
@@ -82,3 +111,12 @@ async def check_glossary() -> JSONResponse:
 
     path = Path(__file__).resolve().parent / "frontend" / "check_glossary.json"
     return JSONResponse(content=json.loads(path.read_text(encoding="utf-8")))
+
+
+@app.get("/api/v1/_debug/routes", tags=["Debug"], include_in_schema=False)
+async def debug_routes() -> dict[str, list[str]]:
+    return {
+        "paths": sorted(
+            {getattr(r, "path", "") for r in app.routes if getattr(r, "path", None)}
+        )
+    }
