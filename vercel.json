@@ -1,7 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "mkdir -p public && cp frontend/index.html public/index.html",
   "installCommand": "pip install -r requirements-vercel.txt",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "{app/**,frontend/check_glossary.json}",
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "rewrites": [
     { "source": "/health", "destination": "/api" },
     { "source": "/api/(.*)", "destination": "/api" }
