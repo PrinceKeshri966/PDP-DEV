@@ -295,23 +295,47 @@
                 ]);
             }
             const names = (understanding?.competitors || []).slice(0, 2);
-            if (names.length >= 2) {
+            if (names.length >= 1) {
                 return names.map((n, i) => ({
                     name: n,
-                    url: `https://www.google.com/search?q=${encodeURIComponent(n + ' official store')}`,
-                    style: i === 0 ? 'Minimalist layout' : 'Trust-first layout',
-                    isSearch: true,
+                    url: n.startsWith('http') ? n : `https://www.google.com/search?q=${encodeURIComponent(n + ' product page')}`,
+                    style: 'Market competitor',
+                    isSearch: !n.startsWith('http'),
                 }));
             }
-            return pick([
-                { name: 'Competitor A', url: 'https://www.amazon.in', style: 'Image-heavy, low text' },
-                { name: 'Competitor B', url: 'https://www.flipkart.com', style: 'Reviews & details' },
-            ]);
+            return [];
         }
 
         function sitePreviewUrl(url) {
             if (!url || url.includes('google.com/search')) return null;
-            return `https://image.thum.io/get/width/480/crop/480/noanimate/${url}`;
+            return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url&meta=false&viewport.width=1280&viewport.height=800`;
+        }
+
+        function SitePreviewFrame({ url, name }) {
+            const [useIframe, setUseIframe] = useState(false);
+            const preview = sitePreviewUrl(url);
+            if (!url) {
+                return <div className="h-full flex items-center justify-center text-slate-400 text-xs">No URL</div>;
+            }
+            if (useIframe || !preview) {
+                return (
+                    <iframe
+                        title={name || 'Site preview'}
+                        src={url}
+                        className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none border-0 bg-white"
+                        sandbox="allow-scripts allow-same-origin"
+                    />
+                );
+            }
+            return (
+                <img
+                    src={preview}
+                    alt={name || 'Site preview'}
+                    className="w-full h-full object-cover object-top bg-slate-100"
+                    loading="lazy"
+                    onError={() => setUseIframe(true)}
+                />
+            );
         }
 
         function extractDomain(url) {
@@ -344,18 +368,6 @@
             const days = Math.floor(hrs / 24);
             if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
             return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function isLikelyHomepageUrl(url) {
-            try {
-                const u = new URL(url.startsWith('http') ? url : `https://${url}`);
-                const path = u.pathname.replace(/\/+$/, '') || '/';
-                if (path === '/') return true;
-                const segments = path.split('/').filter(Boolean);
-                return segments.length === 1 && !/product|pdp|item|sku|dp\//i.test(path);
-            } catch {
-                return false;
-            }
         }
 
         function healthScoreDisplay(report) {
@@ -515,7 +527,7 @@
             // Mode 1 state
             const [urlInput, setUrlInput] = useState('');
             const [mode1Result, setMode1Result] = useState(null);
-            const [reportTab, setReportTab] = useState('WEBSITE');
+            const [reportTab, setReportTab] = useState('COMPARE');
             const [historyItems, setHistoryItems] = useState({ analysis_reports: [], blueprints: [] });
             const [historyLoading, setHistoryLoading] = useState(false);
             const [historyFilter, setHistoryFilter] = useState('all');
@@ -590,7 +602,7 @@
                     }
                     setMode1Result(data);
                     setUrlInput(data.source_url || '');
-                    setReportTab('WEBSITE');
+                    setReportTab('COMPARE');
                     setView('REPORT_MODE1');
                 } catch (e) {
                     showToast(`Could not load report: ${e.message}`);
@@ -657,9 +669,6 @@
             // ── Mode 1: call POST /api/v1/analyze/pdp ────────────────────────────
             const runMode1Analysis = async () => {
                 if (!urlInput.trim()) return;
-                if (isLikelyHomepageUrl(urlInput)) {
-                    showToast('Tip: Use a product page URL (with /products/...) for best PDP audit results.');
-                }
                 setView('ANALYZING');
                 setAnalyzingProgress({ completed: 0, total: 10 });
                 setAnalyzingText('Scraper Agent: Fetching page...');
@@ -675,7 +684,7 @@
                         }
                     );
                     setMode1Result(result);
-                    setReportTab('WEBSITE');
+                    setReportTab('COMPARE');
                     setView('REPORT_MODE1');
                     loadHistory();
                 } catch (err) {
@@ -1413,15 +1422,6 @@
                                     <p className="text-slate-500 mb-4 max-w-xl mx-auto">
                                         Paste any URL. 10 AI agents scan it in 2–4 minutes. Get SEO, AI visibility, conversion, psychological, and competitor scores. Plus ready-to-use fixes and copy.
                                     </p>
-                                    {isLikelyHomepageUrl(urlInput) && urlInput.trim() && (
-                                        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-sm text-amber-900 max-w-2xl mx-auto">
-                                            <i className="ph ph-warning text-amber-500 text-xl shrink-0"></i>
-                                            <div>
-                                                <p className="font-semibold">Homepage detected</p>
-                                                <p className="text-amber-800/90">For the best audit, paste a <strong>product page URL</strong> (e.g. <code className="text-xs bg-amber-100 px-1 rounded">/products/...</code>). Homepages give limited PDP insights.</p>
-                                            </div>
-                                        </div>
-                                    )}
                                     <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex items-center focus-within:border-indigo-400">
                                         <div className="pl-4 text-slate-400"><i className="ph ph-link text-xl"></i></div>
                                         <input
@@ -1522,7 +1522,7 @@
                                 const healthScore = diagnosisRpt.overall_health_score != null ? (diagnosisRpt.overall_health_score * 10).toFixed(0) : '--';
 
                                 const REPORT_TABS = [
-                                    { id: 'WEBSITE', label: 'Your Website' },
+                                    { id: 'COMPARE', label: 'Live Compare' },
                                     { id: 'SEO', label: 'Google Ranking' },
                                     { id: 'AEO', label: 'AI Visibility' },
                                     { id: 'UX', label: 'Conversion & UX' },
@@ -1774,7 +1774,6 @@
                                             <div>
                                                 <h2 className="text-2xl font-bold text-slate-900">Optimization Report</h2>
                                                 <p className="text-slate-500 text-sm">Your full optimization report is ready. Pick a tab below — click any check to learn what it means and how to fix it.</p>
-                                                {mode1Result?.report_id && <p className="text-xs text-slate-400 mt-1 font-mono">ID: {mode1Result.report_id}</p>}
                                             </div>
                                             <div className="flex gap-3">
                                                 <button onClick={() => showToast('Report PDF Downloaded!')} className="px-4 py-2 border border-slate-300 bg-white rounded-lg font-medium hover:bg-slate-50 flex items-center gap-2 text-slate-700">
@@ -1822,25 +1821,87 @@
                                         </div>
 
                                         <div className="space-y-6">
-                                            {reportTab === 'WEBSITE' && (
-                                                <div className="space-y-4">
-                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                                                        <i className="ph ph-globe text-blue-600 text-xl shrink-0"></i>
-                                                        <div className="text-sm text-blue-900">
-                                                            <p className="font-semibold mb-1">Live website preview</p>
-                                                            <p>This is your actual site at <strong>{analyzedUrl}</strong>. Review it first, then explore agent findings in the tabs above.</p>
+                                            {reportTab === 'COMPARE' && (() => {
+                                                const lc = competitorRpt.live_compare || {};
+                                                const sites = lc.sites || [];
+                                                const rows = lc.rows || [];
+                                                const fmtVal = (v, key) => {
+                                                    if (typeof v === 'boolean') return v ? '✓ Yes' : '✗ No';
+                                                    if (v == null || v === '') return '—';
+                                                    if (key === 'page_word_count' || key === 'images_count' || key === 'review_count') return Number(v).toLocaleString();
+                                                    return String(v);
+                                                };
+                                                return (
+                                                <div className="space-y-6">
+                                                    <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-4 flex gap-3">
+                                                        <i className="ph ph-columns text-cyan-600 text-xl shrink-0"></i>
+                                                        <div className="text-sm text-cyan-900">
+                                                            <p className="font-semibold mb-1">Real side-by-side compare</p>
+                                                            <p>Your site vs top competitors — scraped live. Source: <strong>{competitorRpt.data_source || 'live_scrape'}</strong></p>
                                                         </div>
                                                     </div>
-                                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                                        <div className="bg-slate-100 px-4 py-2 text-xs text-slate-500 flex items-center gap-2 border-b">
-                                                            <i className="ph ph-lock"></i> {analyzedUrl}
-                                                            <a href={analyzedUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-indigo-600 hover:underline">Open in new tab</a>
-                                                        </div>
-                                                        <iframe title="Website preview" src={analyzedUrl} className="w-full h-[70vh] border-0 bg-white" sandbox="allow-scripts allow-same-origin allow-popups" />
-                                                        <p className="text-xs text-slate-400 px-4 py-2 bg-slate-50 border-t">If the preview is blank, the site blocks embedding — use <strong>Open in new tab</strong> above.</p>
+                                                    <div className={`grid gap-4 ${sites.length <= 2 ? 'grid-cols-1 md:grid-cols-2' : sites.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
+                                                        {sites.map((site, i) => (
+                                                            <div key={i} className={`rounded-xl border overflow-hidden bg-white shadow-sm ${i === 0 ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200'}`}>
+                                                                <div className={`px-3 py-2 text-xs font-bold flex justify-between items-center ${i === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                                    <span>{i === 0 ? '★ Your site' : site.name}</span>
+                                                                    {!site.scrape_ok && site.role !== 'you' && <span className="text-red-500 text-[10px]">Load failed</span>}
+                                                                </div>
+                                                                <div className="h-44 bg-slate-50 relative overflow-hidden">
+                                                                    <SitePreviewFrame url={site.url} name={site.name} />
+                                                                </div>
+                                                                <div className="p-3 text-xs space-y-1 border-t">
+                                                                    <p className="font-semibold text-slate-800 truncate">{site.features?.product_name || site.name}</p>
+                                                                    <p className="text-slate-500 truncate">{site.url?.replace(/^https?:\/\//, '')}</p>
+                                                                    {site.features?.price && <p className="text-indigo-600 font-bold">{site.features.price}</p>}
+                                                                    <a href={site.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline inline-block mt-1">Open site ↗</a>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
+                                                    {rows.length > 0 ? (
+                                                        <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto shadow-sm">
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr className="bg-slate-50 border-b">
+                                                                        <th className="text-left p-3 font-bold text-slate-600">Feature</th>
+                                                                        {sites.filter(s => s.scrape_ok).map((s, i) => (
+                                                                            <th key={i} className={`p-3 font-bold text-center ${i === 0 ? 'text-indigo-700 bg-indigo-50/50' : 'text-slate-600'}`}>{i === 0 ? 'You' : s.name}</th>
+                                                                        ))}
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {rows.map((row, ri) => (
+                                                                        <tr key={ri} className="border-b last:border-0 hover:bg-slate-50/50">
+                                                                            <td className="p-3 font-medium text-slate-800">{row.label}</td>
+                                                                            {(row.values || []).map((v, vi) => (
+                                                                                <td key={vi} className={`p-3 text-center ${row.best_index === vi ? 'bg-emerald-50 font-bold text-emerald-700' : vi === 0 && !row.you_win ? 'bg-red-50/50 text-red-700' : 'text-slate-600'}`}>
+                                                                                    {fmtVal(v, row.key)}{row.best_index === vi ? ' ★' : ''}
+                                                                                </td>
+                                                                            ))}
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-slate-500 text-center py-8">Competitor pages could not be scraped. Try again or add competitor URLs manually.</p>
+                                                    )}
+                                                    {(competitorRpt.your_gaps_vs_competitors || []).length > 0 && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
+                                                                <h4 className="font-bold text-red-800 mb-2">What to fix on your site</h4>
+                                                                <ul className="text-sm text-red-700 space-y-1">{(competitorRpt.your_gaps_vs_competitors || []).map((g, i) => <li key={i}>• {g}</li>)}</ul>
+                                                            </div>
+                                                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                                                                <h4 className="font-bold text-emerald-800 mb-2">Where you already win</h4>
+                                                                <ul className="text-sm text-emerald-700 space-y-1">{(competitorRpt.winning_patterns || []).length ? (competitorRpt.winning_patterns || []).map((g, i) => <li key={i}>• {g}</li>) : <li>Run compare to see strengths.</li>}</ul>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                                );
+                                            })()}
                                             {reportTab === 'OPTIMIZED' && (
                                                 <div className="space-y-4">
                                                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-sm text-emerald-900">
@@ -2749,7 +2810,7 @@
                                                         <img src={layout.img} className="w-full h-full object-cover opacity-90" alt={layout.title} />
                                                     ) : layout.siteUrl && !layout.siteUrl.includes('google.com') ? (
                                                         <>
-                                                            <iframe title={layout.title} src={layout.siteUrl} className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none border-0" sandbox="allow-scripts allow-same-origin" />
+                                                            <SitePreviewFrame url={layout.siteUrl} name={layout.title} />
                                                             <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate">{layout.siteUrl.replace(/^https?:\/\//, '')}</div>
                                                         </>
                                                     ) : (

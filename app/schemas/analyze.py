@@ -13,7 +13,7 @@ from pydantic import BaseModel, field_validator
 # ── Mode 1 Request ────────────────────────────────────────────────────────────
 class AnalyzePDPRequest(BaseModel):
     url: str
-    competitor_urls: list[str] = []  # optional, max 2
+    competitor_urls: list[str] = []  # optional, max 3
 
     @field_validator("url")
     @classmethod
@@ -24,8 +24,8 @@ class AnalyzePDPRequest(BaseModel):
 
     @field_validator("competitor_urls")
     @classmethod
-    def max_two_competitors(cls, v: list[str]) -> list[str]:
-        return [u.strip() for u in v[:2] if u.strip().startswith(("http://", "https://"))]
+    def max_three_competitors(cls, v: list[str]) -> list[str]:
+        return [u.strip() for u in v[:3] if u.strip().startswith(("http://", "https://"))]
 
 
 # ── Mode 1 Response ───────────────────────────────────────────────────────────
