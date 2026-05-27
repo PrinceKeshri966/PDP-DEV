@@ -5,7 +5,7 @@ optional deps fail during cold start.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
@@ -105,8 +105,11 @@ async def frontend_config() -> dict[str, str | bool]:
 
 
 @app.get("/", include_in_schema=False)
-async def root() -> RedirectResponse:
-    return RedirectResponse("/index.html", status_code=307)
+async def root(request: Request) -> RedirectResponse:
+    dest = "/index.html"
+    if request.url.query:
+        dest = f"{dest}?{request.url.query}"
+    return RedirectResponse(dest, status_code=307)
 
 
 @app.get("/api/v1/glossary/checks", tags=["Config"])

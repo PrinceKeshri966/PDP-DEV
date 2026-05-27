@@ -114,6 +114,7 @@ def create_app() -> FastAPI:
         return JSONResponse(content=json.loads(path.read_text(encoding="utf-8")))
 
     @app.get("/", include_in_schema=False)
+    @app.get("/index.html", include_in_schema=False)
     async def serve_frontend() -> FileResponse:
         if os.getenv("VERCEL") == "1":
             index = _PUBLIC_DIR / "index.html"

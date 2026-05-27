@@ -114,18 +114,18 @@ async def google_callback(
     """Google redirects here after user approves access."""
     if error:
         return RedirectResponse(
-            url=f"{settings.app_base_url}/?auth_error={error}",
+            url=f"{settings.app_base_url}/index.html?auth_error={error}",
             status_code=302,
         )
     if not code or not state:
         return RedirectResponse(
-            url=f"{settings.app_base_url}/?auth_error=missing_code",
+            url=f"{settings.app_base_url}/index.html?auth_error=missing_code",
             status_code=302,
         )
 
     if not _verify_oauth_state(state):
         return RedirectResponse(
-            url=f"{settings.app_base_url}/?auth_error=invalid_state",
+            url=f"{settings.app_base_url}/index.html?auth_error=invalid_state",
             status_code=302,
         )
 
@@ -142,13 +142,13 @@ async def google_callback(
         )
         if token_resp.status_code != 200:
             return RedirectResponse(
-                url=f"{settings.app_base_url}/?auth_error=token_exchange_failed",
+                url=f"{settings.app_base_url}/index.html?auth_error=token_exchange_failed",
                 status_code=302,
             )
         access_token = token_resp.json().get("access_token")
         if not access_token:
             return RedirectResponse(
-                url=f"{settings.app_base_url}/?auth_error=no_access_token",
+                url=f"{settings.app_base_url}/index.html?auth_error=no_access_token",
                 status_code=302,
             )
 
@@ -158,7 +158,7 @@ async def google_callback(
         )
         if user_resp.status_code != 200:
             return RedirectResponse(
-                url=f"{settings.app_base_url}/?auth_error=userinfo_failed",
+                url=f"{settings.app_base_url}/index.html?auth_error=userinfo_failed",
                 status_code=302,
             )
         profile = user_resp.json()
@@ -167,7 +167,7 @@ async def google_callback(
     email = profile.get("email")
     if not google_sub or not email:
         return RedirectResponse(
-            url=f"{settings.app_base_url}/?auth_error=invalid_profile",
+            url=f"{settings.app_base_url}/index.html?auth_error=invalid_profile",
             status_code=302,
         )
 
@@ -195,9 +195,9 @@ async def google_callback(
     await db.commit()
 
     app_token = _issue_app_jwt(user)
-    # Redirect to home with token; frontend stores it and shows Google name in sidebar.
+    # Frontend reads token from URL and stores in sessionStorage.
     return RedirectResponse(
-        url=f"{settings.app_base_url}/?auth_success=1&token={app_token}",
+        url=f"{settings.app_base_url}/index.html?auth_success=1&token={app_token}",
         status_code=302,
     )
 
