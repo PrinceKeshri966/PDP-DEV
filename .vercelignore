@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+_fitpass_state.json
+new_feature_request.txt
+agent-tools/
+.pytest_cache/
