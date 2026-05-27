@@ -1,13 +1,14 @@
 {
   "version": 2,
+  "framework": null,
   "installCommand": "pip install -r requirements-vercel.txt",
   "builds": [
-    { "src": "index.py", "use": "@vercel/python" },
-    { "src": "public/**", "use": "@vercel/static" }
+    { "src": "public/**", "use": "@vercel/static" },
+    { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/health", "dest": "index.py" },
-    { "src": "/api/(.*)", "dest": "index.py" },
+    { "src": "/health", "dest": "api/index.py" },
+    { "src": "/api/(.*)", "dest": "api/index.py" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

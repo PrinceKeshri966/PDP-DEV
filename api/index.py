@@ -1,5 +1,5 @@
 """
-Vercel ASGI entry (project root) — full repo is available to @vercel/python build.
+Vercel serverless entry — only /api/* and /health hit this file.
 """
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 import traceback
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
