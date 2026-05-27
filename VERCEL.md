@@ -10,10 +10,13 @@ Repo: https://github.com/PrinceKeshri966/PDP-DEV
 
 1. Go to [vercel.com](https://vercel.com) → **Add New** → **Project**
 2. Import **PrinceKeshri966/PDP-DEV**
-3. Framework Preset: **Other**
-4. Root Directory: `.` (repo root)
-5. Build Command: leave empty (Vercel uses `vercel.json`)
-6. Output Directory: leave empty
+3. **Critical settings** (override defaults):
+   - Framework Preset: **Other**
+   - Root Directory: **.** (leave empty — repo root)
+   - Build Command: **leave empty** (uses `vercel.json`)
+   - Output Directory: **public** (or leave empty if `vercel.json` sets it)
+   - Turn **OFF** any dashboard overrides that conflict with `vercel.json`
+4. Click **Deploy**
 
 ## 3. Environment variables
 

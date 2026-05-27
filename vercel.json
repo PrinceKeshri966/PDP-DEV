@@ -1,15 +1,10 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "outputDirectory": "public",
   "installCommand": "pip install -r requirements-vercel.txt",
-  "builds": [
-    { "src": "public/**", "use": "@vercel/static" },
-    { "src": "api/index.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/health", "dest": "api/index.py" },
-    { "src": "/api/(.*)", "dest": "api/index.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/health", "destination": "/api" },
+    { "source": "/api/:path*", "destination": "/api" }
   ]
 }
