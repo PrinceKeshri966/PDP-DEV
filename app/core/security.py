@@ -183,7 +183,7 @@ async def get_current_user(
             algorithms=["HS256"],
             options={"verify_aud": False},
         )
-        if payload.get("iss") == "optipdp" and payload.get("sub"):
+        if payload.get("iss") == "organic360" and payload.get("sub"):
             return ClerkUser(payload)
     except jwt.ExpiredSignatureError:
         raise HTTPException(

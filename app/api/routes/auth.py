@@ -1,6 +1,6 @@
 """
 app/api/routes/auth.py
-Google OAuth sign-in / sign-up for OptiPDP.
+Google OAuth sign-in / sign-up for Organic360.
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ def _issue_app_jwt(user: User) -> str:
         "email": user.email,
         "name": user.full_name or user.email.split("@")[0],
         "picture": user.avatar_url,
-        "iss": "optipdp",
+        "iss": "organic360",
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=settings.jwt_expire_hours)).timestamp()),
     }

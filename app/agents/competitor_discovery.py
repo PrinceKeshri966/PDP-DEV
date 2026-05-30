@@ -158,7 +158,7 @@ async def discover_competitor_urls(
         if len(found) >= limit:
             return found[:limit]
 
-    headers: dict[str, str] = {"Accept": "text/plain", "User-Agent": "OptiPDP/1.0"}
+    headers: dict[str, str] = {"Accept": "text/plain", "User-Agent": "Organic360/1.0"}
     if settings.jina_api_key.strip():
         headers["Authorization"] = f"Bearer {settings.jina_api_key.strip()}"
 

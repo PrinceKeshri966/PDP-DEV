@@ -1,4 +1,4 @@
-# Deploy OptiPDP on Vercel (one-time / demo)
+# Deploy Organic360 on Vercel (one-time / demo)
 
 > **Note:** Mode 1 analysis takes 2–4 minutes. Vercel serverless max is **60s** (Pro) or **10s** (Hobby). Long audits may timeout — use **Render** for production. This setup is fine for login, History, and quick API tests.
 
@@ -62,7 +62,7 @@ vercel --prod
 - `https://YOUR-PROJECT.vercel.app/health` → `{"status":"ok"}`
 - `https://YOUR-PROJECT.vercel.app/api/v1/config` → `{"auth_provider":"google",...}`
 - `https://YOUR-PROJECT.vercel.app/config.json` → static fallback (same shape)
-- `https://YOUR-PROJECT.vercel.app` → OptiPDP UI with **Sign in with Google**
+- `https://YOUR-PROJECT.vercel.app` → Organic360 UI with **Sign in with Google**
 
 ### If you see 404 NOT_FOUND on `/api/v1/config`
 

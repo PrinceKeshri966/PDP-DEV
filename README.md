@@ -1,4 +1,4 @@
-# PDP-DEV (OptiPDP)
+# PDP-DEV (Organic360)
 
 AI Commerce Optimization — FastAPI backend + React UI (`frontend/index.html`), Google sign-in, Neon PostgreSQL.
 
