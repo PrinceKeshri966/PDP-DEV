@@ -25,6 +25,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OptiPDP - AI Commerce OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -32,21 +35,270 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" crossorigin="anonymous"></script>
     <style>
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .radar-spinner { position: relative; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #e2e8f0; }
-        .radar-spinner::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border-radius: 50%; border: 3px solid transparent; border-top-color: #4f46e5; animation: spin 1s linear infinite; }
+        /* ─── OptiPDP Design System ─────────────────────────────────────────────── */
+        :root {
+            --c-bg:        #F5F5F0;
+            --c-surface:   #FAFAF8;
+            --c-ink:       #1A1410;
+            --c-dark:      #1C1C1C;
+            --c-stone:     #6B5C4E;
+            --c-muted:     #9B8E84;
+            --c-border:    #DDD4C8;
+            --c-border-lt: #EDE8E0;
+            --c-sand:      #B8A68A;
+            --c-sage:      #A8B5A0;
+            --c-sage-dk:   #8DA383;
+            --c-terra:     #D4A59A;
+            --c-terra-dk:  #C49488;
+            --c-gold:      #D4AF37;
+            --c-steel:     #8B9A9C;
+        }
+
+        /* ── Typography ───────────────────────────────────────────────────────── */
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif !important; background-color: var(--c-bg); color: var(--c-dark); }
+        .font-serif, h1, h2, h3 { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif !important; }
+        .text-2xl.font-bold, .text-3xl.font-bold, .text-4xl.font-bold, .text-xl.font-bold { font-family: 'Playfair Display', Georgia, serif !important; }
+        .tracking-tight { letter-spacing: -0.025em !important; }
+
+        /* ── Scrollbar ────────────────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--c-sand); border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* ── Animations ───────────────────────────────────────────────────────── */
+        .fade-in { animation: fadeIn 0.45s cubic-bezier(.22,.68,0,1.1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Loading Spinner ──────────────────────────────────────────────────── */
+        .radar-spinner { position: relative; width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--c-border); }
+        .radar-spinner::before { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--c-terra); animation: spin 1.3s cubic-bezier(.4,0,.2,1) infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* ── Background Palette ───────────────────────────────────────────────── */
+        .bg-slate-50  { background-color: var(--c-bg) !important; }
+        .bg-white     { background-color: var(--c-surface) !important; }
+        .bg-slate-100 { background-color: #EDEAE4 !important; }
+        .bg-slate-900 { background-color: var(--c-ink) !important; }
+        .bg-slate-800 { background-color: var(--c-dark) !important; }
+
+        /* Indigo → Terracotta */
+        .bg-indigo-600 { background-color: var(--c-terra) !important; }
+        .bg-indigo-700 { background-color: var(--c-terra-dk) !important; }
+        .bg-indigo-500 { background-color: var(--c-terra) !important; }
+        .bg-indigo-50  { background-color: rgba(168,181,160,.13) !important; }
+        .bg-indigo-100 { background-color: rgba(168,181,160,.22) !important; }
+
+        /* Purple → Sage */
+        .bg-purple-50  { background-color: rgba(168,181,160,.09) !important; }
+        .bg-purple-100 { background-color: rgba(168,181,160,.18) !important; }
+        .bg-purple-200 { background-color: rgba(168,181,160,.28) !important; }
+        .bg-purple-600 { background-color: var(--c-sage) !important; }
+        .bg-purple-700 { background-color: var(--c-sage-dk) !important; }
+
+        /* Cyan → Steel Grey */
+        .bg-cyan-50  { background-color: rgba(139,154,156,.09) !important; }
+        .bg-cyan-100 { background-color: rgba(139,154,156,.18) !important; }
+
+        /* Violet → Sage */
+        .bg-violet-50  { background-color: rgba(168,181,160,.09) !important; }
+        .bg-violet-100 { background-color: rgba(168,181,160,.18) !important; }
+
+        /* Emerald → Sage */
+        .bg-emerald-50  { background-color: rgba(168,181,160,.1) !important; }
+        .bg-emerald-100 { background-color: rgba(168,181,160,.2) !important; }
+
+        /* Amber → Gold */
+        .bg-amber-50  { background-color: rgba(212,175,55,.08) !important; }
+        .bg-amber-100 { background-color: rgba(212,175,55,.16) !important; }
+
+        /* Orange → Terracotta */
+        .bg-orange-50  { background-color: rgba(212,165,154,.1) !important; }
+        .bg-orange-100 { background-color: rgba(212,165,154,.2) !important; }
+
+        /* Blue → Steel */
+        .bg-blue-50  { background-color: rgba(139,154,156,.09) !important; }
+        .bg-blue-100 { background-color: rgba(139,154,156,.18) !important; }
+
+        /* Red — keep but muted */
+        .bg-red-50  { background-color: rgba(192,72,72,.06) !important; }
+        .bg-red-100 { background-color: rgba(192,72,72,.12) !important; }
+
+        /* ── Gradient Stops ───────────────────────────────────────────────────── */
+        .from-slate-50   { --tw-gradient-from: var(--c-bg) !important; }
+        .to-slate-100    { --tw-gradient-to:   #EDEAE4 !important; }
+        .via-indigo-50\/30 { --tw-gradient-via: rgba(168,181,160,.05) !important; }
+        .from-indigo-50  { --tw-gradient-from: rgba(168,181,160,.08) !important; }
+        .from-indigo-100 { --tw-gradient-from: rgba(168,181,160,.18) !important; }
+        .to-indigo-50    { --tw-gradient-to:   rgba(168,181,160,.08) !important; }
+        .to-white        { --tw-gradient-to:   var(--c-surface) !important; }
+        .from-purple-50  { --tw-gradient-from: rgba(168,181,160,.06) !important; }
+        .from-purple-100 { --tw-gradient-from: rgba(168,181,160,.16) !important; }
+        .to-purple-50    { --tw-gradient-to:   rgba(168,181,160,.06) !important; }
+        .to-purple-100   { --tw-gradient-to:   rgba(168,181,160,.16) !important; }
+        .from-purple-600 { --tw-gradient-from: var(--c-sage) !important; }
+        .to-purple-700   { --tw-gradient-to:   var(--c-sage-dk) !important; }
+        .hover\:from-purple-700:hover { --tw-gradient-from: var(--c-sage-dk) !important; }
+        .hover\:to-purple-800:hover   { --tw-gradient-to:   #7A9470 !important; }
+
+        /* ── Text Palette ─────────────────────────────────────────────────────── */
+        .text-slate-900 { color: var(--c-ink)   !important; }
+        .text-slate-800 { color: var(--c-dark)  !important; }
+        .text-slate-700 { color: #2A2420        !important; }
+        .text-slate-600 { color: var(--c-stone) !important; }
+        .text-slate-500 { color: #8A7A72        !important; }
+        .text-slate-400 { color: var(--c-muted) !important; }
+        .text-slate-300 { color: #B8ADA8        !important; }
+
+        .text-indigo-600 { color: var(--c-terra)    !important; }
+        .text-indigo-700 { color: var(--c-terra-dk) !important; }
+        .text-indigo-500 { color: var(--c-terra)    !important; }
+        .text-indigo-900 { color: var(--c-dark)     !important; }
+
+        .text-purple-600 { color: var(--c-sage)    !important; }
+        .text-purple-700 { color: var(--c-sage-dk) !important; }
+        .text-purple-800 { color: #6A8A62          !important; }
+        .text-purple-900 { color: var(--c-dark)    !important; }
+
+        .text-cyan-600 { color: var(--c-steel)  !important; }
+        .text-cyan-700 { color: #6B8082          !important; }
+
+        .text-blue-700 { color: var(--c-steel)  !important; }
+        .text-blue-800 { color: #6B8082          !important; }
+
+        .text-emerald-500 { color: var(--c-sage)    !important; }
+        .text-emerald-600 { color: var(--c-sage-dk) !important; }
+        .text-emerald-700 { color: #6A8A62          !important; }
+        .text-emerald-800 { color: #567048          !important; }
+        .text-emerald-900 { color: var(--c-dark)    !important; }
+
+        .text-green-400 { color: var(--c-sage) !important; }
+        .text-green-500 { color: var(--c-sage) !important; }
+
+        .text-amber-600 { color: var(--c-gold)  !important; }
+        .text-amber-700 { color: #B8962A        !important; }
+        .text-amber-800 { color: #9B7D1E        !important; }
+        .text-amber-900 { color: #7A6018        !important; }
+
+        .text-orange-700 { color: var(--c-terra-dk) !important; }
+
+        .text-violet-600 { color: var(--c-sage)    !important; }
+        .text-violet-700 { color: var(--c-sage-dk) !important; }
+
+        .text-red-700 { color: #A03A3A !important; }
+        .text-red-800 { color: #8B2E2E !important; }
+
+        /* ── Border Palette ───────────────────────────────────────────────────── */
+        .border-slate-200 { border-color: var(--c-border)    !important; }
+        .border-slate-100 { border-color: var(--c-border-lt) !important; }
+        .border-slate-300 { border-color: #C8BAB0            !important; }
+        .border-slate-800 { border-color: #2A2420            !important; }
+
+        .border-indigo-100 { border-color: rgba(212,165,154,.30) !important; }
+        .border-indigo-200 { border-color: rgba(212,165,154,.45) !important; }
+        .border-indigo-400 { border-color: var(--c-terra)        !important; }
+        .border-indigo-600 { border-color: var(--c-terra)        !important; }
+
+        .border-purple-100 { border-color: rgba(168,181,160,.30) !important; }
+        .border-purple-200 { border-color: rgba(168,181,160,.45) !important; }
+        .border-purple-300 { border-color: rgba(168,181,160,.55) !important; }
+        .border-purple-400 { border-color: var(--c-sage)         !important; }
+
+        .border-emerald-100 { border-color: rgba(141,163,131,.30) !important; }
+        .border-emerald-200 { border-color: rgba(141,163,131,.45) !important; }
+
+        .border-cyan-100  { border-color: rgba(139,154,156,.28) !important; }
+        .border-violet-100 { border-color: rgba(168,181,160,.28) !important; }
+        .border-amber-100 { border-color: rgba(212,175,55,.22)  !important; }
+        .border-orange-100 { border-color: rgba(212,165,154,.28) !important; }
+        .border-blue-100  { border-color: rgba(139,154,156,.28) !important; }
+        .border-red-100   { border-color: rgba(192,72,72,.22)   !important; }
+        .border-red-200   { border-color: rgba(192,72,72,.32)   !important; }
+
+        /* Colored top borders on cards */
+        .border-t-yellow-400 { border-top-color: var(--c-gold)      !important; }
+        .border-t-purple-400 { border-top-color: var(--c-sage)      !important; }
+        .border-t-blue-400   { border-top-color: var(--c-steel)     !important; }
+        .border-t-orange-400 { border-top-color: var(--c-terra)     !important; }
+        .border-t-cyan-400   { border-top-color: var(--c-steel)     !important; }
+        .border-t-green-400  { border-top-color: var(--c-sage-dk)   !important; }
+
+        /* ── Hover & Focus ────────────────────────────────────────────────────── */
+        .hover\:bg-slate-50:hover   { background-color: rgba(168,181,160,.1)  !important; }
+        .hover\:bg-slate-100:hover  { background-color: rgba(168,181,160,.18) !important; }
+        .hover\:bg-indigo-700:hover { background-color: var(--c-terra-dk)     !important; }
+        .hover\:bg-purple-700:hover { background-color: var(--c-sage-dk)      !important; }
+        .hover\:bg-purple-800:hover { background-color: #7A9470               !important; }
+        .hover\:border-indigo-400:hover { border-color: var(--c-terra) !important; }
+        .hover\:text-indigo-600:hover   { color: var(--c-terra)        !important; }
+        .hover\:text-red-500:hover      { color: #B04040                !important; }
+        .hover\:text-slate-600:hover    { color: var(--c-stone)         !important; }
+        .hover\:bg-white\/80:hover      { background-color: rgba(250,250,248,.8) !important; }
+        .focus\:ring-indigo-500:focus   { --tw-ring-color: rgba(212,165,154,.4) !important; }
+        .focus\:border-indigo-500:focus { border-color: var(--c-terra)          !important; }
+        .focus-within\:border-indigo-400:focus-within { border-color: var(--c-terra) !important; }
+
+        /* ── Status Colors ────────────────────────────────────────────────────── */
+        .bg-green-500 { background-color: var(--c-sage) !important; }
+        .text-gray-400 { color: var(--c-steel) !important; }
+        .text-gray-500 { color: var(--c-steel) !important; }
+        .border-gray-100 { border-color: var(--c-border-lt) !important; }
+
+        /* ── Shadows ──────────────────────────────────────────────────────────── */
+        .shadow-sm  { box-shadow: 0 1px 3px  rgba(26,20,16,.07), 0 1px 2px  rgba(26,20,16,.04) !important; }
+        .shadow-md  { box-shadow: 0 4px 12px rgba(26,20,16,.08), 0 2px 4px  rgba(26,20,16,.05) !important; }
+        .shadow-xl  { box-shadow: 0 8px 30px rgba(26,20,16,.09), 0 4px 10px rgba(26,20,16,.05) !important; }
+        .shadow-2xl { box-shadow: 0 16px 48px rgba(26,20,16,.11), 0 6px 16px rgba(26,20,16,.06) !important; }
+        .hover\:shadow-xl:hover { box-shadow: 0 8px 30px rgba(26,20,16,.09), 0 4px 10px rgba(26,20,16,.05) !important; }
+        .hover\:shadow-lg:hover { box-shadow: 0 6px 20px rgba(26,20,16,.08), 0 3px 8px rgba(26,20,16,.05) !important; }
+
+        /* ── Refined Borders ──────────────────────────────────────────────────── */
+        .rounded-2xl { border-radius: 10px  !important; }
+        .rounded-xl  { border-radius: 8px   !important; }
+        .rounded-lg  { border-radius: 6px   !important; }
+
+        /* ── Sidebar & Layout ─────────────────────────────────────────────────── */
+        aside { background-color: var(--c-surface) !important; border-right-color: var(--c-border) !important; }
+
+        /* ── Animate pulse (status dot) ───────────────────────────────────────── */
+        .animate-pulse { animation: subtlePulse 2.5s ease-in-out infinite; }
+        @keyframes subtlePulse { 0%,100% { opacity:1; } 50% { opacity:.55; } }
+
+        /* ── Additional hover/interactive states ──────────────────────────────── */
+        .hover\:bg-slate-200:hover  { background-color: rgba(168,181,160,.22) !important; }
+        .hover\:bg-indigo-50:hover  { background-color: rgba(212,165,154,.08) !important; }
+        .hover\:bg-purple-50:hover  { background-color: rgba(168,181,160,.1)  !important; }
+        .border-dashed.border-indigo-200 { border-color: rgba(212,165,154,.4) !important; }
+        .bg-indigo-600.text-white { color: #FAFAF8 !important; }
+
+        /* ── Layout tabs active state ─────────────────────────────────────────── */
+        .border-2.border-indigo-600 { border-color: var(--c-terra) !important; }
+
+        /* ── Comparison table "You" column ───────────────────────────────────── */
+        .bg-indigo-50\/50 { background-color: rgba(168,181,160,.08) !important; }
+        .text-indigo-700.bg-indigo-50\/50 { color: var(--c-terra-dk) !important; }
+
+        /* ── Score label color ────────────────────────────────────────────────── */
+        .bg-emerald-400, .bg-emerald-500 { background-color: var(--c-sage)    !important; }
+        .bg-emerald-600                  { background-color: var(--c-sage-dk) !important; }
+
+        /* ── Back-nav arrows ─────────────────────────────────────────────────── */
+        .hover\:text-indigo-600:hover { color: var(--c-terra) !important; }
+
+        /* ── Inline code monospace blocks — bg-slate-50 stays light ─────────── */
+        pre.bg-slate-50 { background-color: #F5F5F0 !important; border-color: var(--c-border) !important; }
+
+        /* ── Prose code blocks keep dark theme ────────────────────────────────── */
+        pre .text-green-400, code .text-green-400 { color: #86EFAC !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen flex overflow-hidden">
+<body class="antialiased h-screen flex overflow-hidden" style="background-color:#F5F5F0;color:#1C1C1C;font-family:'Inter',system-ui,sans-serif;">
     <div id="root" class="w-full h-full flex items-center justify-center">
-        <div class="text-center text-slate-400 p-6">
-            <div class="radar-spinner mx-auto mb-4 flex items-center justify-center"><i class="ph ph-rocket-launch text-3xl text-indigo-500 animate-pulse"></i></div>
-            <h3 class="text-lg font-bold text-slate-800 mb-1">OptiPDP</h3>
-            <p class="text-sm text-slate-500">Loading AI agents — preparing your optimization workspace…</p>
+        <div class="text-center p-6">
+            <div class="radar-spinner mx-auto mb-6 flex items-center justify-center">
+                <i class="ph ph-sparkle text-xl" style="color:#D4A59A;"></i>
+            </div>
+            <h3 class="mb-2" style="font-family:'Playfair Display',Georgia,serif;font-size:1.25rem;font-weight:600;color:#1A1410;letter-spacing:-0.02em;">OptiPDP</h3>
+            <p style="font-size:0.8125rem;color:#9B8E84;letter-spacing:0.01em;">Preparing your optimization workspace…</p>
         </div>
     </div>
 
@@ -570,20 +822,20 @@
             };
 
             return (
-                <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-slate-100 p-6">
+                <div className="min-h-screen w-full flex items-center justify-center p-6" style={{background:'#F5F5F0'}}>
                     <div className="w-full max-w-md">
-                        <div className="text-center mb-8">
-                            <div className="inline-flex items-center justify-center gap-2 text-indigo-600 mb-3">
-                                <i className="ph ph-hexagon-fill text-4xl"></i>
-                                <span className="font-bold text-3xl text-slate-900">OptiPDP</span>
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center justify-center gap-2.5 mb-4">
+                                <i className="ph ph-hexagon-fill text-4xl" style={{color:'#D4AF37'}}></i>
+                                <span className="font-bold text-3xl tracking-tight" style={{fontFamily:"'Playfair Display',Georgia,serif",color:'#1A1410'}}>OptiPDP</span>
                             </div>
-                            <p className="text-slate-600">AI Commerce Optimization for your product pages</p>
+                            <p className="text-sm" style={{color:'#9B8E84',letterSpacing:'0.01em'}}>AI Commerce Optimization for your product pages</p>
                         </div>
 
                         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
                             <div className="flex border-b border-slate-100">
-                                <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 py-3 text-sm font-bold transition ${mode === 'sign-in' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}>Sign In</button>
-                                <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 py-3 text-sm font-bold transition ${mode === 'sign-up' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}>Sign Up</button>
+                                <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 py-3 text-sm font-semibold transition ${mode === 'sign-in' ? 'border-b-2' : 'text-slate-500 hover:bg-slate-50'}`} style={mode === 'sign-in' ? {color:'#C49488',borderBottomColor:'#D4A59A',background:'rgba(212,165,154,.06)'} : {}}>Sign In</button>
+                                <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 py-3 text-sm font-semibold transition ${mode === 'sign-up' ? 'border-b-2' : 'text-slate-500 hover:bg-slate-50'}`} style={mode === 'sign-up' ? {color:'#C49488',borderBottomColor:'#D4A59A',background:'rgba(212,165,154,.06)'} : {}}>Sign Up</button>
                             </div>
 
                             <div className="p-6">
@@ -595,7 +847,7 @@
                                 )}
 
                                 {authProvider === 'google' && (
-                                    <button type="button" onClick={startGoogle} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-300 rounded-xl bg-white hover:bg-slate-50 transition shadow-sm font-semibold text-slate-700 mb-4">
+                                    <button type="button" onClick={startGoogle} className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-slate-50 transition shadow-sm font-semibold mb-4" style={{border:'1px solid var(--c-border)',color:'#2A2420'}}>
                                         <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                                         Continue with Google
                                     </button>
@@ -1325,18 +1577,18 @@
                     {/* SIDEBAR */}
                     <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col justify-between z-20 shadow-sm">
                         <div>
-                            <div className="flex items-center gap-2 mb-10 text-indigo-600">
+                            <div className="flex items-center gap-2 mb-10" style={{color:'#D4AF37'}}>
                                 <i className="ph ph-hexagon-fill text-3xl"></i>
-                                <span className="font-bold text-xl tracking-tight text-slate-900">OptiPDP</span>
+                                <span className="font-bold text-xl tracking-tight" style={{fontFamily:"'Playfair Display',Georgia,serif",color:'#1A1410'}}>OptiPDP</span>
                             </div>
-                            <nav className="space-y-2 text-sm font-medium text-slate-600">
-                                <button onClick={() => setView('HOME')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isHomeNav ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}>
+                            <nav className="space-y-1 text-sm font-medium text-slate-600">
+                                <button onClick={() => setView('HOME')} className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 ${isHomeNav ? 'font-semibold' : 'hover:bg-slate-50'}`} style={isHomeNav ? {background:'rgba(212,165,154,.12)',color:'#C49488'} : {}}>
                                     <i className="ph ph-sparkle text-lg"></i> AI Optimization
                                 </button>
-                                <button onClick={() => setView('HISTORY')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${view === 'HISTORY' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}>
+                                <button onClick={() => setView('HISTORY')} className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 ${view === 'HISTORY' ? 'font-semibold' : 'hover:bg-slate-50'}`} style={view === 'HISTORY' ? {background:'rgba(212,165,154,.12)',color:'#C49488'} : {}}>
                                     <i className="ph ph-clock-counter-clockwise text-lg"></i> History
                                     {(historyItems.analysis_reports?.length || 0) + (historyItems.blueprints?.length || 0) > 0 && (
-                                        <span className="ml-auto text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                                        <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background:'rgba(184,166,138,.25)',color:'#6B5C4E'}}>
                                             {(historyItems.analysis_reports?.length || 0) + (historyItems.blueprints?.length || 0)}
                                         </span>
                                     )}
@@ -1356,7 +1608,7 @@
                                 {authUser?.picture ? (
                                     <img src={authUser.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{userInitials}</div>
+                                    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs shrink-0" style={{background:'#B8A68A'}}>{userInitials}</div>
                                 )}
                                 <div className="text-xs overflow-hidden min-w-0">
                                     <p className="font-bold truncate">{userName}</p>
@@ -1379,8 +1631,8 @@
                                 AI Commerce Copilot
                             </h2>
                             <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 text-xs font-semibold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 px-3 py-1.5 rounded-full">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{background:'rgba(212,175,55,.1)',color:'#9B7D1E',border:'1px solid rgba(212,175,55,.25)'}}>
+                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{background:'#A8B5A0'}}></span>
                                     {agentBadgeCount} AI Agents Ready
                                 </div>
                             </div>
@@ -1398,20 +1650,20 @@
                                             onClick={() => setView('MODE1_INPUT')} 
                                             className="group cursor-pointer"
                                         >
-                                            <div className="bg-white p-8 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all duration-300 h-full">
-                                                <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                                                    <i className="ph ph-link text-3xl"></i>
+                                            <div className="p-8 rounded-2xl border-2 transition-all duration-300 h-full hover:shadow-xl group-hover:-translate-y-1" style={{background:'var(--c-surface)',borderColor:'var(--c-border)'}}>
+                                                <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 shadow-sm" style={{background:'rgba(212,165,154,.12)',color:'#C49488'}}>
+                                                    <i className="ph ph-link text-2xl"></i>
                                                 </div>
-                                                <h3 className="text-2xl font-bold mb-2 text-slate-900">Audit & Optimize</h3>
-                                                <p className="text-slate-600 mb-6 leading-relaxed">
+                                                <h3 className="text-2xl font-bold mb-2 text-slate-900">Audit &amp; Optimize</h3>
+                                                <p className="text-slate-600 mb-6 leading-relaxed text-sm">
                                                     Paste your product URL. 10 AI agents scan it instantly and give you SEO scores, AI visibility insights, psychological triggers, and competitor benchmarks.
                                                 </p>
-                                                <ul className="space-y-2 mb-6 text-sm text-slate-700">
-                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> 60+ SEO checks</li>
-                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> Copy-paste fixes ready</li>
-                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> Competitor analysis</li>
+                                                <ul className="space-y-2 mb-6 text-sm text-slate-600">
+                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> 60+ SEO checks</li>
+                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> Copy-paste fixes ready</li>
+                                                    <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> Competitor analysis</li>
                                                 </ul>
-                                                <button className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 group-hover:-translate-y-1 transition-transform">
+                                                <button className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all" style={{background:'#D4A59A',color:'#FAFAF8'}}>
                                                     <i className="ph ph-magic-wand"></i> Audit Now
                                                 </button>
                                             </div>
@@ -1422,22 +1674,22 @@
                                             onClick={() => setView('MODE2_INPUT')} 
                                             className="group cursor-pointer"
                                         >
-                                            <div className="bg-gradient-to-br from-purple-50 to-white p-8 rounded-2xl border-2 border-purple-300 shadow-sm hover:shadow-xl transition-all duration-300 h-full relative overflow-hidden">
-                                                <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-200/30 rounded-full blur-3xl"></div>
+                                            <div className="p-8 rounded-2xl border-2 transition-all duration-300 h-full relative overflow-hidden hover:shadow-xl group-hover:-translate-y-1" style={{background:'var(--c-surface)',borderColor:'rgba(168,181,160,.45)'}}>
+                                                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{background:'rgba(168,181,160,.15)'}}></div>
                                                 <div className="relative z-10">
-                                                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                                                        <i className="ph ph-rocket-launch text-3xl"></i>
+                                                    <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 shadow-sm" style={{background:'rgba(168,181,160,.15)',color:'#8DA383'}}>
+                                                        <i className="ph ph-rocket-launch text-2xl"></i>
                                                     </div>
                                                     <h3 className="text-2xl font-bold mb-2 text-slate-900">Build New Pages</h3>
-                                                    <p className="text-slate-600 mb-6 leading-relaxed">
+                                                    <p className="text-slate-600 mb-6 leading-relaxed text-sm">
                                                         Describe your product or business. Our AI generates a complete, high-converting page layout with SEO-optimized copy, CTAs, and psychological triggers.
                                                     </p>
-                                                    <ul className="space-y-2 mb-6 text-sm text-slate-700">
-                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> AI-researched competitors</li>
-                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> Instant page blueprint</li>
-                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-emerald-500 text-lg"></i> Live refine with copilot</li>
+                                                    <ul className="space-y-2 mb-6 text-sm text-slate-600">
+                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> AI-researched competitors</li>
+                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> Instant page blueprint</li>
+                                                        <li className="flex items-center gap-2"><i className="ph ph-check-circle text-lg" style={{color:'#A8B5A0'}}></i> Live refine with copilot</li>
                                                     </ul>
-                                                    <button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg font-bold hover:from-purple-700 hover:to-purple-800 transition-all flex items-center justify-center gap-2 group-hover:-translate-y-1 transition-transform shadow-md hover:shadow-lg">
+                                                    <button className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all shadow-sm" style={{background:'#A8B5A0',color:'#FAFAF8'}}>
                                                         <i className="ph ph-pen-nib"></i> Generate Page
                                                     </button>
                                                 </div>
@@ -1544,15 +1796,15 @@
                                                 <h3 className="font-bold text-slate-800 mb-2">No history yet</h3>
                                                 <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">Run your first URL audit or generate a blueprint — it will appear here automatically.</p>
                                                 <div className="flex gap-3 justify-center">
-                                                    <button onClick={() => setView('MODE1_INPUT')} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">Audit a URL</button>
-                                                    <button onClick={() => setView('MODE2_INPUT')} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700">Create Blueprint</button>
+                                                    <button onClick={() => setView('MODE1_INPUT')} className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all" style={{background:'#D4A59A',color:'#FAFAF8'}}>Audit a URL</button>
+                                                    <button onClick={() => setView('MODE2_INPUT')} className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all" style={{background:'#A8B5A0',color:'#FAFAF8'}}>Create Blueprint</button>
                                                 </div>
                                             </div>
                                         ) : noResults ? (
                                             <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
                                                 <i className="ph ph-magnifying-glass text-3xl text-slate-300 mb-3"></i>
                                                 <p className="text-slate-600 font-medium">No results for "{historySearch}"</p>
-                                                <button onClick={() => setHistorySearch('')} className="text-indigo-600 text-sm mt-2 hover:underline">Clear search</button>
+                                                <button onClick={() => setHistorySearch('')} className="text-sm mt-2 hover:underline" style={{color:'#D4A59A'}}>Clear search</button>
                                             </div>
                                         ) : (
                                             <div className="space-y-3">
@@ -1572,7 +1824,7 @@
                                                                 <img src={faviconUrl(item.source_url)} alt="" className="w-11 h-11 rounded-xl border border-slate-100 bg-slate-50 p-1.5 shrink-0" />
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Mode 1 · Audit</span>
+                                                                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" style={{background:'rgba(212,165,154,.18)',color:'#C49488'}}>Mode 1 · Audit</span>
                                                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
                                                                     </div>
                                                                     <p className="font-bold text-slate-900 truncate">{domain}</p>
@@ -1644,7 +1896,7 @@
                                             onChange={e => setUrlInput(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && runMode1Analysis()}
                                         />
-                                        <button onClick={runMode1Analysis} className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold flex items-center gap-2 whitespace-nowrap">
+                                        <button onClick={runMode1Analysis} className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2 whitespace-nowrap transition-all" style={{background:'#D4A59A',color:'#FAFAF8'}}>
                                             <i className="ph ph-magic-wand"></i> Run Agents
                                         </button>
                                     </div>
@@ -1715,7 +1967,7 @@
                                         <div className="mt-4 flex gap-3">
                                             <button onClick={() => runMode2FromChat(chatHistory, {
                                                 setView, setAnalyzingText, setAnalyzingProgress, setMode2Result, showToast, setViewOnFail: 'MODE2_INPUT', onComplete: loadHistory
-                                            })} className="bg-purple-600 text-white px-4 py-2 rounded-lg">Generate Blueprint</button>
+                                            })} className="px-4 py-2 rounded-lg font-semibold" style={{background:'#A8B5A0',color:'#FAFAF8'}}>Generate Blueprint</button>
 
                                             <button onClick={() => { setChatHistory([{ role: 'ai', text: 'I have generated the initial high-converting layout based on your business brief. How would you like to refine it?' }]); setChatInput(''); showToast('Chat reset'); }} className="bg-white border px-4 py-2 rounded-lg">Reset Chat</button>
                                         </div>
