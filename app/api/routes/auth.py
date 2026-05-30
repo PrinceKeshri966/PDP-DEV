@@ -197,7 +197,7 @@ async def google_callback(
     await db.commit()
 
     app_token = _issue_app_jwt(user)
-    # Frontend reads token from URL and stores in sessionStorage.
+    # Frontend reads token from URL and stores in localStorage (shared across tabs).
     return RedirectResponse(
         url=f"{settings.app_base_url}/index.html?auth_success=1&token={app_token}",
         status_code=302,

@@ -108,6 +108,10 @@ async def extractor_agent(state: AgentState) -> AgentState:
     if parse_err:
         return {"errors": [parse_err]}
 
+    dom = state.get("dom_technical_seo")
+    if isinstance(dom, dict) and dom:
+        structured_data["_dom_technical_seo"] = dom
+
     logger.info(
         "extractor_agent.done",
         product=structured_data.get("product_name"),

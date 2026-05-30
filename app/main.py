@@ -108,7 +108,17 @@ def create_app() -> FastAPI:
             "screenshot_available": playwright_enabled(),
         }
 
-    # ── Serve the React frontend at / ─────────────────────────────────────────
+    # ── Serve the React frontend (SPA — deep links must return index.html) ─────
+
+    def _frontend_index_path() -> Path:
+        if os.getenv("VERCEL") == "1":
+            index = _PUBLIC_DIR / "index.html"
+            if index.is_file():
+                return index
+        return _FRONTEND_DIR / "index.html"
+
+    def _serve_spa() -> FileResponse:
+        return FileResponse(_frontend_index_path())
 
     @app.get("/api/v1/glossary/checks", tags=["Config"])
     async def check_glossary() -> JSONResponse:
@@ -118,12 +128,11 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     @app.get("/index.html", include_in_schema=False)
+    @app.get("/history", include_in_schema=False)
+    @app.get("/report/{report_id}", include_in_schema=False)
+    @app.get("/report/{report_id}/{tab_slug}", include_in_schema=False)
     async def serve_frontend() -> FileResponse:
-        if os.getenv("VERCEL") == "1":
-            index = _PUBLIC_DIR / "index.html"
-            if index.is_file():
-                return FileResponse(index)
-        return FileResponse(_FRONTEND_DIR / "index.html")
+        return _serve_spa()
 
     return app
 

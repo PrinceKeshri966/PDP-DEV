@@ -41,6 +41,7 @@ class AgentState(TypedDict, total=False):
     # ── Phase 1: Scraper output ───────────────────────────────────────────────
     markdown_content: Optional[str]
     scraper_method: Optional[str]
+    dom_technical_seo: Optional[dict[str, Any]]
 
     # ── Phase 1: Extractor output ─────────────────────────────────────────────
     json_structured_data: Optional[dict[str, Any]]

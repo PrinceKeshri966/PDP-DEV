@@ -14,16 +14,17 @@ Set SKIP_PLAYWRIGHT=true on Render (default in render.yaml).
 """
 from __future__ import annotations
 
-import os
 import re
 import time
 from html import unescape
+from typing import Any
 
 import httpx
 
 from app.agents.state import AgentState
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.playwright_env import playwright_enabled
 
 logger = get_logger(__name__)
 _settings = get_settings()
@@ -42,14 +43,64 @@ _BROWSER_UA = (
     "Chrome/120.0.0.0 Safari/537.36"
 )
 
+_META_DESC_RE = [
+    re.compile(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']', re.I),
+    re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']description["\']', re.I),
+    re.compile(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']', re.I),
+    re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:description["\']', re.I),
+]
+_TITLE_RE = [
+    re.compile(r"<title[^>]*>([^<]+)</title>", re.I),
+    re.compile(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']', re.I),
+]
+_CANONICAL_RE = re.compile(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']', re.I)
 
-def _playwright_enabled() -> bool:
-    """Playwright is off on Render unless explicitly enabled."""
-    return os.getenv("SKIP_PLAYWRIGHT", "true").lower() not in (
-        "1",
-        "true",
-        "yes",
-    )
+
+def _clean_meta_text(text: str) -> str:
+    return unescape(re.sub(r"\s+", " ", text or "")).strip()
+
+
+def _first_match(patterns: list[re.Pattern[str]], html: str) -> str | None:
+    for pat in patterns:
+        m = pat.search(html)
+        if m:
+            val = _clean_meta_text(m.group(1))
+            if val:
+                return val
+    return None
+
+
+def extract_dom_technical_seo(html: str) -> dict[str, Any]:
+    """Recover head metadata from raw HTML (meta description, title, canonical)."""
+    if not html:
+        return {}
+    head = html[:120_000]
+    dom: dict[str, Any] = {}
+    title = _first_match(_TITLE_RE, head)
+    meta = _first_match(_META_DESC_RE, head)
+    if title:
+        dom["title_tag"] = title
+    if meta:
+        dom["meta_description"] = meta
+    if _CANONICAL_RE.search(head):
+        dom["canonical_present"] = True
+    if re.search(r'<meta[^>]+property=["\']og:title["\']', head, re.I):
+        dom["open_graph_present"] = True
+    return dom
+
+
+async def fetch_dom_technical_seo(url: str) -> dict[str, Any]:
+    try:
+        async with httpx.AsyncClient(
+            timeout=20.0,
+            follow_redirects=True,
+            headers={"User-Agent": _BROWSER_UA, "Accept": "text/html"},
+        ) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return extract_dom_technical_seo(resp.text)
+    except Exception:
+        return {}
 
 
 def _html_to_text(html: str) -> str:
@@ -159,7 +210,7 @@ async def scraper_agent(state: AgentState) -> AgentState:
         state["status"] = "failed"
         return state
 
-    logger.info("scraper_agent.start", url=url, skip_playwright=not _playwright_enabled())
+    logger.info("scraper_agent.start", url=url, skip_playwright=not playwright_enabled())
     t0 = time.monotonic()
     attempt_errors: list[str] = []
     content = ""
@@ -190,7 +241,7 @@ async def scraper_agent(state: AgentState) -> AgentState:
             content, method = text, "httpx"
 
     # 4 — Playwright (local dev only)
-    if _playwright_enabled() and len(content) < _JINA_THIN_THRESHOLD:
+    if playwright_enabled() and len(content) < _JINA_THIN_THRESHOLD:
         text, err = await _try_fetch("playwright", _fetch_with_playwright, url)
         if err:
             attempt_errors.append(err)
@@ -203,7 +254,7 @@ async def scraper_agent(state: AgentState) -> AgentState:
         summary = (
             "scraper_agent: could not fetch enough page content. "
             f"Tried {'firecrawl, ' if _settings.firecrawl_api_key else ''}jina, httpx"
-            + (", playwright" if _playwright_enabled() else "")
+            + (", playwright" if playwright_enabled() else "")
             + f". Details: {' | '.join(attempt_errors[:3])}"
         )
         logger.error("scraper_agent.all_failed", url=url, errors=attempt_errors)
@@ -213,8 +264,11 @@ async def scraper_agent(state: AgentState) -> AgentState:
 
     logger.info("scraper_agent.done", method=method, chars=len(content), duration_ms=duration_ms)
 
+    dom = await fetch_dom_technical_seo(url)
     state["markdown_content"] = content
     state["scraper_method"] = method
+    if dom:
+        state["dom_technical_seo"] = dom
     state["agent_reports"] = state.get("agent_reports", []) + [
         {
             "agent": "scraper_agent",

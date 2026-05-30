@@ -23,6 +23,30 @@ logger = get_logger(__name__)
 
 _MODEL = get_model("seo")
 
+
+def _seo_value_missing(value: object) -> bool:
+    if value is None:
+        return True
+    text = str(value).strip()
+    return not text or "not provided" in text.lower()
+
+
+def _apply_dom_seo_recovery(seo_report: dict[str, Any], dom: dict[str, Any]) -> None:
+    """Map scraped head metadata into seo_report when the LLM could not read tags from markdown."""
+    if not dom:
+        return
+    if dom.get("meta_description"):
+        block = seo_report.get("meta_description") or {}
+        if _seo_value_missing(block.get("value")):
+            val = str(dom["meta_description"]).strip()
+            seo_report["meta_description"] = {**block, "value": val, "length": len(val)}
+    if dom.get("title_tag"):
+        block = seo_report.get("title_tag") or {}
+        if _seo_value_missing(block.get("value")):
+            val = str(dom["title_tag"]).strip()
+            seo_report["title_tag"] = {**block, "value": val, "length": len(val)}
+
+
 _SYSTEM_PROMPT = """
 You are an expert e-commerce SEO analyst following Google Search Essentials and
 Semrush/Ahrefs industry standards.
@@ -152,6 +176,10 @@ async def seo_agent(state: AgentState) -> AgentState:
     seo_report, parse_err = safe_json_parse_report(raw, "seo_agent")
     if parse_err:
         return {"errors": [parse_err]}
+
+    dom = state.get("dom_technical_seo") or structured.get("_dom_technical_seo") or {}
+    if isinstance(dom, dict):
+        _apply_dom_seo_recovery(seo_report, dom)
 
     logger.info(
         "seo_agent.done",

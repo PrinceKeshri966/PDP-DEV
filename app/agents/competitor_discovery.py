@@ -6,6 +6,9 @@ from urllib.parse import quote, urlparse
 
 import httpx
 
+from app.agents.claude_client import claude
+from app.agents.json_utils import safe_json_parse
+from app.agents.model_router import get_model
 from app.core.config import get_settings
 
 _LINK_RE = re.compile(r"https?://[^\s\)\]\"'<>]+", re.I)
@@ -118,18 +121,67 @@ def _search_queries(
     categories: list[str],
     user_domain: str,
 ) -> list[str]:
-    cat = (categories[-1] if categories else "") or "beauty"
+    cat = (categories[0] if categories else "") or "ecommerce"
     name = (product_name or cat).split("|")[0].strip()[:60]
     brand = user_domain.split(".")[0].replace("-", " ").strip() if user_domain else ""
     if homepage_mode:
         queries = [
-            f"{cat} beauty brand india official website",
-            f"skincare cosmetics online store india",
+            f"{cat} brand india official website",
+            f"{name} competitors india",
+            f"top {cat} companies india online",
         ]
         if brand:
-            queries.append(f"brands like {brand} india beauty ecommerce")
+            queries.append(f"brands like {brand} {cat} india")
         return queries
-    return [f"buy {name} {cat} online india"]
+    return [f"buy {name} {cat} online india", f"{name} {cat} india shop"]
+
+
+async def _discover_via_claude(
+    user_url: str,
+    product_name: str,
+    categories: list[str],
+    *,
+    homepage_mode: bool,
+    limit: int,
+    seen_domains: set[str],
+    user_domain: str,
+) -> list[str]:
+    """Fallback when Jina search is unavailable — Claude suggests real competitor URLs."""
+    cat = (categories[0] if categories else "") or "ecommerce"
+    kind = "homepage root URL" if homepage_mode else "product page URL"
+    try:
+        response = await claude.messages.create(
+            model=get_model("scraper_parser"),
+            max_tokens=400,
+            system='Return ONLY JSON: {"urls":["https://example.com/", ...]} — no prose.',
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"List up to {limit} direct competitor {kind}s for this business.\n"
+                        f"Site: {user_url}\nProduct/brand: {product_name}\nCategory: {cat}\n"
+                        f"Exclude domain: {user_domain}\n"
+                        f"Use real Indian market competitors with working https URLs."
+                    ),
+                }
+            ],
+        )
+        parsed = safe_json_parse(response.content[0].text)
+        found: list[str] = []
+        for raw in parsed.get("urls") or []:
+            if not isinstance(raw, str) or not raw.startswith("http"):
+                continue
+            norm = to_site_root(raw) if homepage_mode else raw.split("#")[0]
+            dom = _domain(norm)
+            if not dom or dom in seen_domains or dom == user_domain:
+                continue
+            found.append(norm)
+            seen_domains.add(dom)
+            if len(found) >= limit:
+                break
+        return found
+    except Exception:
+        return []
 
 
 async def discover_competitor_urls(
@@ -200,4 +252,37 @@ async def discover_competitor_urls(
     except Exception:
         pass
 
+    if len(found) < limit:
+        claude_urls = await _discover_via_claude(
+            user_url,
+            product_name,
+            categories,
+            homepage_mode=homepage_mode,
+            limit=limit - len(found),
+            seen_domains=seen_domains,
+            user_domain=user_domain,
+        )
+        found.extend(claude_urls)
+
     return found[:limit]
+
+
+async def discover_replacement_urls(
+    user_url: str,
+    product_name: str,
+    categories: list[str],
+    *,
+    seen_domains: set[str],
+    homepage_mode: bool,
+    limit: int = 3,
+) -> list[str]:
+    """Extra competitor URLs when live scrape fails — excludes already-tried domains."""
+    return await _discover_via_claude(
+        user_url,
+        product_name,
+        categories,
+        homepage_mode=homepage_mode,
+        limit=limit,
+        seen_domains=seen_domains,
+        user_domain=_domain(user_url),
+    )

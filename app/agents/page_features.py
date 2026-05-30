@@ -25,6 +25,8 @@ def features_from_structured(data: dict[str, Any]) -> dict[str, Any]:
         "page_word_count": int(data.get("page_word_count") or 0),
         "has_size_guide": bool(data.get("has_size_guide")),
         "has_return_policy": bool(data.get("return_policy")),
+        "has_faq": bool(data.get("has_faq")),
+        "schema_present": bool(data.get("schema_present")),
         "price": data.get("price"),
         "description_len": len((data.get("description") or "")),
     }
@@ -47,6 +49,8 @@ def features_from_markdown(markdown: str, url: str = "") -> dict[str, Any]:
         "page_word_count": len(markdown.split()),
         "has_size_guide": bool(re.search(r"size guide|size chart|find your size", text)),
         "has_return_policy": bool(re.search(r"return policy|easy returns|days return", text)),
+        "has_faq": bool(re.search(r"\bfaq\b|frequently asked questions", text)),
+        "schema_present": bool(re.search(r"application/ld\+json|schema\.org", markdown, re.I)),
         "price": _first_price(text),
         "description_len": len(markdown),
     }
@@ -57,7 +61,16 @@ def _first_price(text: str) -> str | None:
     return m.group(0).strip() if m else None
 
 
-_COMPARE_ROWS = (
+_HOMEPAGE_COMPARE_ROWS = (
+    ("Images on this page", "images_count", "higher"),
+    ("Words on this page", "page_word_count", "higher"),
+    ("Video present", "has_video", "bool"),
+    ("Reviews visible", "has_reviews", "bool"),
+    ("FAQ present", "has_faq", "bool"),
+    ("Structured data", "schema_present", "bool"),
+)
+
+_PRODUCT_COMPARE_ROWS = (
     ("Product images", "images_count", "higher"),
     ("Page content (words)", "page_word_count", "higher"),
     ("Customer reviews", "has_reviews", "bool"),
@@ -65,12 +78,15 @@ _COMPARE_ROWS = (
     ("Product video", "has_video", "bool"),
     ("Size guide", "has_size_guide", "bool"),
     ("Return policy", "has_return_policy", "bool"),
+    ("FAQ present", "has_faq", "bool"),
+    ("Structured data", "schema_present", "bool"),
 )
 
 
-def build_comparison_matrix(sites: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_comparison_matrix(sites: list[dict[str, Any]], *, page_type: str = "product") -> list[dict[str, Any]]:
+    row_defs = _HOMEPAGE_COMPARE_ROWS if page_type == "homepage" else _PRODUCT_COMPARE_ROWS
     rows: list[dict[str, Any]] = []
-    for label, key, mode in _COMPARE_ROWS:
+    for label, key, mode in row_defs:
         values = [s.get("features", {}).get(key) for s in sites]
         if all(v in (None, 0, False, "") for v in values):
             continue
@@ -114,7 +130,7 @@ def gaps_from_matrix(sites: list[dict[str, Any]], rows: list[dict[str, Any]]) ->
         comp = sites[best_i]
         comp_name = _domain(comp.get("url", "")) or comp.get("name", "Competitor")
         yv, cv = you.get(key), comp.get("features", {}).get(key)
-        if row["key"] in ("has_reviews", "has_video", "has_size_guide", "has_return_policy"):
+        if row["key"] in ("has_reviews", "has_video", "has_size_guide", "has_return_policy", "has_faq", "schema_present"):
             if not yv and cv:
                 gaps.append(f"{label}: missing on your page — {comp_name} has it")
         elif isinstance(yv, (int, float)) and isinstance(cv, (int, float)) and cv > yv:

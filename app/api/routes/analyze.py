@@ -30,9 +30,10 @@ import json
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 
+import httpx
 from uuid import UUID
 
-from anthropic import APIStatusError
+from anthropic import APIConnectionError, APIStatusError, APITimeoutError
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +72,17 @@ def _pipeline_http_error(exc: Exception) -> HTTPException:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI service is temporarily overloaded. Please wait a moment and try again.",
         )
+    if isinstance(exc, (APIConnectionError, APITimeoutError, httpx.ReadError, httpx.ConnectError, httpx.TimeoutException)):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service connection dropped. Please retry — the pipeline will auto-retry on transient errors.",
+        )
     msg = str(exc).lower()
+    if "connection error" in msg or "readerror" in msg or "connecterror" in msg:
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service connection dropped. Please retry — the pipeline will auto-retry on transient errors.",
+        )
     if "overloaded" in msg or "529" in msg or "rate limit" in msg:
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

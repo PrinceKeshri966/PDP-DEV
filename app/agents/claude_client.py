@@ -11,7 +11,8 @@ import asyncio
 import random
 from typing import Any
 
-from anthropic import APIStatusError, AsyncAnthropic
+import httpx
+from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic, APITimeoutError
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -58,6 +59,22 @@ async def create_message(**kwargs: Any) -> Any:
                 status=status,
                 delay_s=round(delay, 2),
                 model=kwargs.get("model"),
+            )
+            await asyncio.sleep(delay)
+        except (APIConnectionError, APITimeoutError, httpx.ReadError, httpx.ConnectError, httpx.TimeoutException) as exc:
+            last_error = exc
+            if attempt >= _MAX_ATTEMPTS:
+                raise
+
+            delay = min(2 ** (attempt - 1) + random.uniform(0.5, 1.5), 90.0)
+            logger.warning(
+                "claude.retry",
+                attempt=attempt,
+                max_attempts=_MAX_ATTEMPTS,
+                reason="connection",
+                delay_s=round(delay, 2),
+                model=kwargs.get("model"),
+                error=str(exc)[:120],
             )
             await asyncio.sleep(delay)
 

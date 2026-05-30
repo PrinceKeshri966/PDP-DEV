@@ -440,8 +440,43 @@
             } catch (_) { return null; }
         }
 
+        const AUTH_TOKEN_KEY = 'auth_token';
+        const AUTH_RETURN_PATH_KEY = 'auth_return_path';
+
+        function isTokenExpired(token) {
+            const p = parseJwtPayload(token);
+            if (!p?.exp) return false;
+            return Date.now() >= (p.exp * 1000) - 30000;
+        }
+
         function getAuthToken() {
-            return sessionStorage.getItem('auth_token');
+            let token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token) {
+                token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+                if (token) {
+                    localStorage.setItem(AUTH_TOKEN_KEY, token);
+                    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+                }
+            }
+            if (token && isTokenExpired(token)) {
+                clearAuthToken();
+                return null;
+            }
+            return token;
+        }
+
+        function setAuthToken(token) {
+            if (!token) {
+                clearAuthToken();
+                return;
+            }
+            localStorage.setItem(AUTH_TOKEN_KEY, token);
+            sessionStorage.removeItem(AUTH_TOKEN_KEY);
+        }
+
+        function clearAuthToken() {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            sessionStorage.removeItem(AUTH_TOKEN_KEY);
         }
 
         const AUTH_ERROR_MESSAGES = {
@@ -517,9 +552,40 @@
                 recommendations: asArray(data.aeo_report.recommendations),
                 quick_wins_for_ai: asArray(data.aeo_report.quick_wins_for_ai),
             } : data.aeo_report;
+            let seoMerged = seo;
+            if (seo && dom.meta_description) {
+                const curMeta = seo.meta_description?.value;
+                const placeholder = !curMeta || /not provided/i.test(String(curMeta));
+                if (placeholder) {
+                    const val = String(dom.meta_description).trim();
+                    seoMerged = {
+                        ...seo,
+                        meta_description: {
+                            ...(seo.meta_description || {}),
+                            value: val,
+                            length: val.length,
+                        },
+                    };
+                }
+            }
+            if (seoMerged && dom.title_tag) {
+                const curTitle = seoMerged.title_tag?.value;
+                const placeholder = !curTitle || /not provided/i.test(String(curTitle));
+                if (placeholder) {
+                    const val = String(dom.title_tag).trim();
+                    seoMerged = {
+                        ...seoMerged,
+                        title_tag: {
+                            ...(seoMerged.title_tag || {}),
+                            value: val,
+                            length: val.length,
+                        },
+                    };
+                }
+            }
             return {
                 ...data,
-                seo_report: seo,
+                seo_report: seoMerged,
                 ux_report: ux,
                 aeo_report: aeo,
                 dom_technical_seo: dom,
@@ -644,13 +710,13 @@
                 }
                 const imp = (autofixRpt.site_improvements || []).find(x => x.field_key === field);
                 if (imp && imp.show_recommendation !== false && imp.recommended) return imp.recommended;
-                return null;
+                return autofixRpt[field] || null;
             }
             const map = { fixed_title_tag: 'title_tag', fixed_meta_description: 'meta_description', fixed_h1: 'h1', rewritten_product_description: 'description' };
             const comp = (autofixRpt.fix_comparisons || []).find(x => x.field === map[field]);
             if (comp) return comp.valid_fix ? (comp.after || comp.proposed_after || null) : ((comp.display_valid || comp.show_recommendation) ? (comp.proposed_after || comp.recommended || null) : null);
             if (vf[field] === true) return autofixRpt[field] || null;
-            return null;
+            return autofixRpt[field] || null;
         }
 
         function isJunkSiteCopy(text) {
@@ -716,6 +782,7 @@
 
         /** Downgrade competitor UI when scrapes fail or demo skipped discovery. */
         const COMPETITOR_CONFIDENCE_THRESHOLD = 0.45;
+        const DEFAULT_EXTRACTION_CONFIDENCE = 1.0;
 
         function getCompetitorTrust(competitorRpt) {
             if (!competitorRpt || !Object.keys(competitorRpt).length) {
@@ -748,10 +815,11 @@
         function getCompetitorIntelligence(competitorRpt, mode1Result) {
             const base = getCompetitorTrust(competitorRpt);
             const reliability = mode1Result?.audit_reliability || {};
-            const ecRaw = reliability.extraction_confidence
-                ?? mode1Result?.extraction_confidence?.overall_extraction_confidence
-                ?? 0;
-            const extConf = Number(ecRaw) || 0;
+            const ecFromBackend = reliability.extraction_confidence
+                ?? mode1Result?.extraction_confidence?.overall_extraction_confidence;
+            const extConf = ecFromBackend != null && ecFromBackend !== ''
+                ? (Number(ecFromBackend) || 0)
+                : DEFAULT_EXTRACTION_CONFIDENCE;
             const extPct = reliability.extraction_confidence_pct ?? Math.round(extConf * 100);
             const skipped = Boolean(competitorRpt?.skipped);
             const allCompetitorSites = (competitorRpt?.live_compare?.sites || []).filter(s => s.role === 'competitor');
@@ -766,12 +834,12 @@
             const confidenceOk = extConf >= COMPETITOR_CONFIDENCE_THRESHOLD;
             const showLiveCompare = confidenceOk && !skipped && !base.suppressMatrix && competitorListed > 0;
             const showBenchmark = false;
-            const unavailable = skipped || !confidenceOk || !showLiveCompare;
+            const unavailable = skipped || !showLiveCompare;
             const unavailableReason = skipped
                 ? (competitorRpt?.skip_reason || 'Competitor analysis was skipped by the audit pipeline')
                 : !confidenceOk
                     ? `Extraction confidence ${extPct}% is below ${Math.round(COMPETITOR_CONFIDENCE_THRESHOLD * 100)}% — we hide live competitor comparison to avoid misleading data`
-                    : !showLiveCompare && !showBenchmark
+                    : !showLiveCompare
                         ? base.reason || 'No reliable competitor data was collected for this URL'
                         : null;
             return {
@@ -833,7 +901,7 @@
         }
 
         function buildReportPath(reportId, tabId) {
-            return `/report/${encodeURIComponent(reportId)}/${tabIdToSlug(tabId)}`;
+            return `/report/${encodeURIComponent(reportId)}`;
         }
 
         function buildAppPath(view, reportId, tabId) {
@@ -1165,7 +1233,7 @@
         }
 
         function signOutAuth() {
-            sessionStorage.removeItem('auth_token');
+            clearAuthToken();
             if (_clerk) {
                 _clerk.signOut(() => window.location.reload());
             } else {
@@ -1851,9 +1919,11 @@
             );
         }
 
-        function SitePreviewFrame({ url, name, scrapeOk, highlightYou }) {
+        function SitePreviewFrame({ url, name, scrapeOk, highlightYou, screenshotBase64 }) {
             const [useIframe, setUseIframe] = useState(false);
-            const preview = sitePreviewUrl(url);
+            const preview = screenshotBase64
+                ? `data:image/png;base64,${screenshotBase64}`
+                : sitePreviewUrl(url);
             const failed = scrapeOk === false;
             if (!url) {
                 return <div className="h-full flex items-center justify-center text-slate-400 text-xs">No URL</div>;
@@ -2027,6 +2097,8 @@
             return <span>{display}</span>;
         }
 
+        const MODE1_AGENT_TOTAL = 10;
+
         function AgentAnalysisLoader({ text, progress, title }) {
             const pct = progress?.total ? Math.min(100, Math.round((progress.completed / progress.total) * 100)) : 0;
             const hints = [
@@ -2064,7 +2136,7 @@
                             <div className="h-full gradient-accent-animated progress-bar-animated rounded-full" style={{ width: `${Math.max(pct, 4)}%` }}></div>
                         </div>
                         <p className="text-xs text-slate-400 mt-3 text-center">
-                            {progress?.completed ?? 0}/{progress?.total ?? 15} agents · {pct}% complete
+                            {progress?.completed ?? 0}/{progress?.total ?? MODE1_AGENT_TOTAL} agents · {pct}% complete
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
@@ -2109,6 +2181,10 @@
             }, [mode, authProvider]);
 
             const startGoogle = () => {
+                const path = window.location.pathname + window.location.search;
+                if (path && path !== '/' && path !== '/index.html') {
+                    localStorage.setItem(AUTH_RETURN_PATH_KEY, path);
+                }
                 window.location.href = '/api/v1/auth/google/login';
             };
 
@@ -2269,7 +2345,7 @@
             //        VISUALIZER_MODE2 | SUCCESS
             const [view, setView] = useState(INITIAL_ROUTE.view);
             const [analyzingText, setAnalyzingText] = useState('');
-            const [analyzingProgress, setAnalyzingProgress] = useState({ completed: 0, total: 15 });
+            const [analyzingProgress, setAnalyzingProgress] = useState({ completed: 0, total: MODE1_AGENT_TOTAL });
 
             // Mode 1 state
             const [urlInput, setUrlInput] = useState(INITIAL_ROUTE.urlInput);
@@ -2519,7 +2595,7 @@
             };
 
             const applyHistoryReport = (data, id, initialTab, opts = {}) => {
-                const normalized = normalizeMode1Result(data);
+                const normalized = normalizeMode1Result({ ...data, report_id: data.report_id || id });
                 const gateFail = resolveScrapeGateFailure(normalized);
                 const hasData = data.seo_report && Object.keys(data.seo_report).length > 0;
                 if (!opts.silent) {
@@ -2690,7 +2766,7 @@
             const runMode1Analysis = async () => {
                 if (!urlInput.trim()) return;
                 setView('ANALYZING');
-                setAnalyzingProgress({ completed: 0, total: 15 });
+                setAnalyzingProgress({ completed: 0, total: MODE1_AGENT_TOTAL });
                 setAnalyzingText('Scraper Agent: Fetching page...');
                 try {
                     const result = await apiStreamAnalyze(
@@ -2699,7 +2775,7 @@
                         (evt) => {
                             if (evt.label) setAnalyzingText(evt.label);
                             if (evt.completed_count != null) {
-                                setAnalyzingProgress({ completed: evt.completed_count, total: evt.total_count || 14 });
+                                setAnalyzingProgress({ completed: evt.completed_count, total: evt.total_count || MODE1_AGENT_TOTAL });
                             }
                         }
                     );
@@ -4028,7 +4104,10 @@
                                             )}
                                             {activeReportTab === 'COMPINTEL' && compIntel.showLiveCompare && (() => {
                                                 const lc = competitorRpt.live_compare || {};
-                                                const sites = lc.sites || [];
+                                                const allSites = lc.sites || [];
+                                                const youSite = allSites.find(s => s.role === 'you');
+                                                const compSites = allSites.filter(s => s.role === 'competitor' && s.scrape_ok !== false).slice(0, 3);
+                                                const sites = youSite ? [youSite, ...compSites] : compSites;
                                                 const PDP_COMPARE_KEYS = new Set(['has_size_guide', 'size_guide', 'fit_description']);
                                                 const rows = (lc.rows || []).filter(r => !isNonPdpPage || !PDP_COMPARE_KEYS.has(r.key));
                                                 const pageType = lc.compare_page_type || 'product';
@@ -4065,7 +4144,7 @@
                                                                     </div>
                                                                 </div>
                                                                 <div className="h-44 bg-slate-50 relative overflow-hidden">
-                                                                    <SitePreviewFrame url={site.url} name={site.name} scrapeOk={site.scrape_ok} highlightYou={i === 0} />
+                                                                    <SitePreviewFrame url={site.url} name={site.name} scrapeOk={site.scrape_ok} highlightYou={i === 0} screenshotBase64={site.screenshot_base64} />
                                                                 </div>
                                                                 <div className="p-3 text-xs space-y-1 border-t">
                                                                     <p className="font-semibold text-slate-800 truncate">{site.features?.product_name || site.name}</p>
@@ -5194,19 +5273,32 @@
             const params = new URLSearchParams(window.location.search);
             const urlToken = params.get('token');
             if (urlToken) {
-                sessionStorage.setItem('auth_token', urlToken);
+                setAuthToken(urlToken);
             }
             if (params.get('auth_error')) {
                 authError = params.get('auth_error');
             }
             if (urlToken || params.get('auth_error') || params.get('auth_success')) {
-                const route = parseAppPath(window.location.pathname);
+                const returnPath = localStorage.getItem(AUTH_RETURN_PATH_KEY)
+                    || sessionStorage.getItem('auth_return_path');
+                if (returnPath) {
+                    localStorage.removeItem(AUTH_RETURN_PATH_KEY);
+                    sessionStorage.removeItem('auth_return_path');
+                }
+                const route = parseAppPath(returnPath || window.location.pathname);
                 const cleanPath = route.view === 'REPORT_MODE1' && route.reportId
                     ? buildReportPath(route.reportId, route.tab)
                     : route.view === 'HISTORY'
                         ? '/history'
                         : '/';
                 window.history.replaceState({}, '', cleanPath);
+            } else if (!getAuthToken()) {
+                const deepRoute = parseAppPath(window.location.pathname);
+                if (deepRoute.view === 'REPORT_MODE1' && deepRoute.reportId) {
+                    localStorage.setItem(AUTH_RETURN_PATH_KEY, window.location.pathname);
+                } else if (deepRoute.view === 'HISTORY') {
+                    localStorage.setItem(AUTH_RETURN_PATH_KEY, '/history');
+                }
             }
 
             const token = getAuthToken();
@@ -5250,7 +5342,7 @@
                             needsSignIn = false;
                             loadGoogleAuthUser(token).then((freshUser) => {
                                 if (!freshUser) {
-                                    sessionStorage.removeItem('auth_token');
+                                    clearAuthToken();
                                     renderApp({ needsSignIn: true, authUser: null, authProvider, authError });
                                 }
                             });
@@ -5288,6 +5380,12 @@
             }
 
             renderApp({ needsSignIn, authUser, authProvider, authError });
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === AUTH_TOKEN_KEY && !e.newValue && e.oldValue) {
+                    window.location.reload();
+                }
+            });
         }
 
         bootstrap();
